@@ -1,0 +1,120 @@
+\documentclass[UTF-8]{ctexart}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{float}
+\lstset{
+ columns=fixed,
+ numbers=left,                                       
+ frame=none,                                      
+ backgroundcolor=\color[RGB]{245,245,244},            
+ keywordstyle=\color[RGB]{40,40,255},                 
+ numberstyle=\footnotesize\color{darkgray},
+ commentstyle=\it\color[RGB]{0,96,96},                
+ stringstyle=\rmfamily\slshape\color[RGB]{128,0,0},   
+ showstringspaces=false,                              
+ language=c++,
+ breaklines = true                                        
+}
+\title{README}
+\author{工学院 2100011029 渠成锐}
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+\section{并行技术}
+本项目设计了openmp版本与cuda版本（备注：如果助教学长在运行过程中遇到任何问题，
+或者运行速度远慢于报告中给出的速度，可以直接联系我，我应该一直都在学校的。）\par
+\textbf{openmp版本:}在main函数及相关库中仅使用openmp,在附加题二的相关文件scalapack.cpp中使用MPI。\par
+备注：由于有内存限制的要求，在积分时利用MPI进行数据传输容易导致运行时最大内存超过12g，且代码
+会较为复杂，起到的效果反而不如仅使用openmp，故在求积分时只使用了openmp。\par
+\textbf{cuda版本：}见cuda\_version文件夹中的README
+\section{编译安装运⾏指南}
+\subsubsection{编译链接依赖库}
+\subsubsection{openmpi}
+在命令行依次运行如下命令：
+\begin{enumerate}
+    \item 下载最新发行： wget https://download.open-mpi.org/release/open
+    -mpi/v4.1/openmpi-4.1.5.tar.gz
+    \item 解压安装包： tar -zxvf openmpi-4.1.5.tar.gz
+    \item 进入安装包目录： cd openmpi-4.1.5
+    \item 修改安装地址： ./configure --prefix=/home/Username/software/openmpi-4.1.5 --enable-shared
+    \item 安装： make install -j12
+    \item 添加路径：export PATH=/home/Username/software/openmpi-4.1.5/bin:\$PATH
+    \item export LD\_LIBRARY\_PATH=/home/Username/software/openmpi-4.1.5/lib:\$LD\_LIBRARY\_PATH
+    \item 运行which mpicxx检验是否安装成功
+\end{enumerate}
+\subsubsection{scalapack}
+利用包管理工具进行安装，在命令行运行apt install libscalapack-openmpi-dev
+\subsubsection{lapack}
+利用包管理工具进行安装，在命令行运行apt install install liblapack-dev liblapacke-dev
+\subsection{编译运行指令}
+本项目采用cmake进行构建，进入项目目录后在命令行运行如下指令：
+\begin{enumerate}
+    \item cmake -B build
+    \item cmake --build build
+    \item ./build/big (需要先将输入文件放入input文件夹中)
+\end{enumerate}
+main函数中采用lapacke接口对得到的矩阵，并将特征值和特征向量输出至output文件夹中，
+同时生成matrix.txt文件记录积分得到的实对称矩阵及维数。\par
+如果要修改使用的线程数，只需在main.cpp中将nthreads的值修改为对应值即可。
+对于附加题2，另外设计了利用scalapack接口实现的并行对角化，在命令行中运行如下指令进行调用：
+\begin{enumerate}
+    \item mpicxx scalapack.cpp -lscalapack-openmpi
+    \item mpirun -np 4 ./a.out
+\end{enumerate}
+该程序将读入matrix.txt并利用scalapack接口进行对角化,将特征值和特征向量输出至output文件夹中。（注：本程序默认用4核进行对角化）
+\section{文件结构}
+\begin{enumerate}
+    \item input(文件夹)：存放输入文件
+    \item output(文件夹)：存放输出文件
+    \item tools(文件夹)：存放用到的库
+\end{enumerate}
+\subsection{代码结构}
+\begin{enumerate}
+    \item main.cpp:主函数
+    \item input.h:input类的定义，读入文件输入
+    \item input.cpp:input类的实现
+    \item timer.h:timer类的定义，实现记录函数运行时间的功能
+    \item timer.cpp:timer类的实现
+    \item spline.h:spline类的定义，实现三次样条插值
+    \item spline.cpp:spline类的实现
+    \item diago.h:diago类的定义，实现实对称矩阵对角化（调用lapacke接口）
+    \item diago.cpp:diago类的实现
+    \item scalapack.cpp:调用scalapack接口，采用并行方式对实对称矩阵对角化
+\end{enumerate}
+\subsection{输入文件结构}
+\begin{enumerate}
+    \item INPUT.txt:由input类读取的输入文件，设置计算任务及输入矩阵文件路径
+    \item 调试时将空间相关输入文件放置在input文件夹中，并将INPUT.txt中的路径
+    设置为相应路径即可。
+\end{enumerate}
+\subsection{输出文件结构}
+输出文件均存放至output文件夹中
+\begin{enumerate}
+    \item matrix.txt：积分得到的矩阵，第一行为维数，后面为矩阵元
+    \item eigenvalues.log:调用lapacke接口对角化得到的特征值，从大到小排列
+    \item eigenvectors.log:调用lapacke接口对角化得到的特征向量，顺序和特征值对应（按行排列）
+    \item scal\_eigenvalues.log:调用scalapack接口对角化得到的特征值，从大到小排列
+    \item scal\_eigenvectors.log:调用scalapacke接口对角化得到的特征向量，顺序和特征值对应(按行排列)
+\end{enumerate}
+\section{数据结构的设计}
+项目中在input类的对象实例中存储空间的相关信息，利用一维数组存储V的分布（这是最占存储空间的部分），
+在diago类的对象实例中存储利用追赶法求解得到的样条插值程序的各节点导数值（一个比较小的数组），在main
+函数中动态分配内存存储积分得到的矩阵（占用空间也不大）
+\section{优化工作}
+为了加快积分速度，本项目在积分前先进行了一遍预处理，生成一维的flag矩阵，取值为0或1，
+如果给定两个点之间的距离大于2倍的截断值，则将相应的flag矩阵元置为1,在积分循环中直接跳过，减少计算量。\par
+对于多定点的情形，本项目进行特别的优化，将定点放在外层循环，内层循环是对空间格点的循环。
+在内层循环中，循环i指标时，格点到定点的x方向上的距离平方已经能计算出来了，若其大于截断值的平方，则直接跳过(比较距离的平方
+是由于sqrt函数计算开销比较大，会减慢积分时间)；
+对于j,k指标的循环有类似的处理，由于最后得到的矩阵具有很大的稀疏性，上述优化可以大大加快计算速度，对于50个定点，
+V-512的情形，用8个线程跑，积分用时在0.7s左右；V-1024的情形，用8个线程跑，积分用时在6s左右。\par
+值得一提的是，上述优化工作没有增加任何计算量，中间计算出来的某一方向上距离的平方均为最后需要插值计算的势函数的
+中间值，在最内层循环都能直接用上。唯一的开销是多了4个double型值的存储和3个判断语句，对于存储空间和运行时间的影响
+几乎可忽略。\par
+另外,为了加快积分的速度，在循环时采用动态调度，并利用规约子句进行求和操作（这个会比原子操作和临界区操作快一些，因为规约是每个线程创造属于自己的副本
+，同时这里Hamilton矩阵的大小不大，创建多个副本几乎不会影响内存空间大小）
+\end{document}
